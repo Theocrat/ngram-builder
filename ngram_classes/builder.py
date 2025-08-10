@@ -3,8 +3,9 @@ import re
 import json
 import string
 
-from unidecode import unidecode
+from copy import deepcopy
 from collections import defaultdict
+from unidecode import unidecode
 
 class NGramBuilder:
 
@@ -56,6 +57,30 @@ class NGramBuilder:
             raise ValueError(
                 "Argument to save has to be file object or path to file (str)."
             )
+
+
+    def copy(self):
+        duplicate = NGramBuilder(n=self.n)
+        duplicate.vocab = deepcopy(self.vocab)
+        duplicate.model = deepcopy(self.model)
+        return duplicate
+    
+    
+    def __add__(self, other_builder):
+        """ Combines two models """
+        if self.n != other_builder.n:
+            raise ValueError("Adding Incompatible Models: N not same.")
+        
+        duplicate = self.copy()
+        
+        for token, count in other_builder.vocab.items():
+            duplicate.vocab[token] += count
+
+        for key, next_tokens in other_builder.model.items():
+            for token, count in next_tokens.items():
+                duplicate.model[key][token] += count
+
+        return duplicate
 
     
     @staticmethod
