@@ -1,0 +1,14 @@
+# This gitignore is not required
+.gitignore
+
+# The main file; Used during development
+main.py
+
+# Saved models; Used during development
+/model-saves
+
+# Sample texts; Used during development
+/sample-texts
+
+# Python Caches
+/**/__pycache__
