@@ -10,7 +10,10 @@ from ngram_classes.generator import NGramGenerator
 error_code = Namespace(
     no_command = 1,
     no_target = 2,
-    model_does_not_exist = 3
+    model_does_not_exist = 3,
+    training_existing_model = 4,
+    tuning_nonexistent_model = 5,
+    source_file_not_found = 6
 )
 
 data_path = Path("models")
@@ -22,6 +25,7 @@ parser = ArgumentParser(
 parser.add_argument('command', type=str)
 parser.add_argument('--name', type=str, required=False)
 parser.add_argument('--source', type=str, required=False)
+parser.add_argument('--n', type=int, required=False)
 parser.add_argument('--length', type=int, required=False)
 parser.add_argument('--start', type=str, required=False)
 parser.add_argument('--path', type=str, required=False)
@@ -40,9 +44,11 @@ def model_names():
     ]
 
 match args.command:
+    
     case 'list':
         print(*model_names(), sep="\n")
 
+    
     case 'delete':
         if args.name is None:
             print("Usage: python ngram.py delete --name <model-name>", file=sys.stderr)
@@ -60,15 +66,45 @@ match args.command:
 
         target.unlink()
 
+    
     case 'train':
-        print("Not yet implemented")
+        if any((args.source is None, args.name is None, args.n is None)):
+            print(
+                "Usage: python ngram.py train --name <model-name> --source "
+                "<document-text-file> --n <context-length>",
+                file=sys.stderr
+            )
+            exit(error_code.no_target)
+        
+        target = data_path / f"{args.name}.json"
+        if target.exists():
+            print(
+                "This model already exists. Use the tune command to add "
+                "additional documents to its training data, or choose a "
+                "different name to train a new model.",
+                file=sys.stderr
+            )
+            exit(error_code.training_existing_model)
+        
+        builder = NGramBuilder(n=args.n)
+        try:
+            builder.add_from_file(args.source)
+            data_path.mkdir(exist_ok=True)
+            builder.save(str(target))
+        except FileNotFoundError:
+            print("No such file:", args.source, file=sys.stderr)
+            exit(error_code.source_file_not_found)
 
+
+    
     case 'tune':
         print("Not yet implemented")
 
+    
     case 'generate':
         print("Not yet implemented")
 
+    
     case _:
         print("No such command:", args.command, file=sys.stderr)
         print("Available commands are:", file=sys.stderr)
