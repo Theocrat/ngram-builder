@@ -1,5 +1,5 @@
-# This gitignore is not required
-.gitignore
+# The models directory, which is created if it does not exist
+models
 
 # The main file; Used during development
 main.py
