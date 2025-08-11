@@ -3,6 +3,7 @@ from typing import Self
 
 import io
 import json
+import random
 
 from collections import defaultdict
 
@@ -12,9 +13,10 @@ class NGramGenerator:
         self.n = None
         self.vocab = defaultdict(int)
         self.model = defaultdict(lambda: defaultdict(int))
+        self.state = None
 
     
-    def load_model(self, modelfile: str|io.TextIOWrapper) -> None:
+    def load_file(self, modelfile: str|io.TextIOWrapper) -> None:
         if isinstance(modelfile, str):
             try:
                 with open(modelfile) as sourcefile:
@@ -44,10 +46,10 @@ class NGramGenerator:
 
             model_keys = list(model.keys())
             first_key = model_keys[0]
-            tentative_n = len(first_key.split())
+            tentative_n = len(first_key.split()) + 1
             
             for key in model:
-                if len(key.split()) != tentative_n:
+                if len(key.split()) != tentative_n - 1:
                     raise ValueError(
                         "Corrupted Model: Ngram length (n) is inconsistent"
                     )
@@ -56,7 +58,7 @@ class NGramGenerator:
                 self.n = tentative_n
             elif self.n != tentative_n:
                 raise ValueError(
-                    "Cannot load model: mismatch in n (Ngram length)"
+                    "Cannot load model: mismatch in n (Ngram context length)"
                 )
 
             for token, count in vocab.items():
@@ -75,29 +77,60 @@ class NGramGenerator:
             raise ValueError("Cannot load model: Model appears to be empty")
         
 
-    def __iter__(self, init_phrase: str|tuple[str]|list[str]) -> Self:
-        if isinstance(init_phrase, str):
-            self.state = init_phrase.split()
-            if len(self.state != self.n - 1):
+    def __call__(self, init_key: str|tuple[str]|list[str]) -> Self:
+        if isinstance(init_key, str):
+            self.state = init_key.split()
+            if len(self.state) != self.n - 1:
                 raise ValueError(
                     f"Cannot generate with starting phrase {self.state}: "
                     f"Number of tokens does not match (N - 1) for this model"
                 )
             
-        if isinstance(init_phrase, list):
-            self.state = [*init_phrase]
-            if len(self.state != self.n - 1):
+        if isinstance(init_key, list):
+            self.state = [*init_key]
+            if len(self.state) != self.n - 1:
                 raise ValueError(
                     f"Cannot generate with starting phrase {self.state}: "
                     f"Number of tokens does not match (N - 1) for this model"
                 )
         
-        if isinstance(init_phrase, tuple):
-            self.state = list(init_phrase)
-            if len(self.state != self.n - 1):
+        if isinstance(init_key, tuple):
+            self.state = list(init_key)
+            if len(self.state) != self.n - 1:
                 raise ValueError(
                     f"Cannot generate with starting phrase {self.state}: "
                     f"Number of tokens does not match (N - 1) for this model"
                 )
             
         return self
+    
+
+    def __iter__(self) -> Self:
+        self.vocab_spreadout = []
+        for token, count in self.vocab.items():
+            self.vocab_spreadout.extend([token] * count)
+        return self
+    
+
+    def __next__(self) -> str:
+        if self.state is None:
+            raise StopIteration
+        
+        keyphrase = ' '.join(self.state)
+        
+        if keyphrase in self.model:
+            candidates = []
+            for token, count in self.model[keyphrase].items():
+                candidates.extend([token] * count)
+            
+            choice = random.choice(candidates)
+            self.state.pop(0)
+            self.state.append(choice)
+            
+            return choice
+        
+        else:
+            choice = random.choice(self.vocab_spreadout)
+            self.state.pop(0)
+            self.state.append(choice)
+            return choice
