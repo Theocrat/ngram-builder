@@ -10,7 +10,16 @@ import random
 from collections import defaultdict
 
 class NGramGenerator:
-    """ Class for building n-gram autoregressors """
+    """ N-GRAM GENERATOR
+    Class for running prediction and autoregression tasks
+    Usage:
+        generator = NGramGenerator()
+        generator.load_file("path/to/trigram/model.json")
+        
+        for token in generator(["token_1", "token_2"]):
+            print(token, end=" ")
+        print()
+    """
 
     def __init__(self):
         """ Initializes the autoregressor with empty fields """
