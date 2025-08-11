@@ -15,7 +15,7 @@ class NGramGenerator:
     Usage:
         generator = NGramGenerator()
         generator.load_file("path/to/trigram/model.json")
-        
+
         for token in generator(["token_1", "token_2"]):
             print(token, end=" ")
         print()
@@ -77,42 +77,55 @@ class NGramGenerator:
             Returns: None
         """
         try:
-            vocab = data["vocab"]
-            model = data["model"]
+            self.vocab = data["vocab"]
+            self.model = data["model"]
+            self.vocab_spreadout = []
+            for token, count in self.vocab.items():
+                self.vocab_spreadout.extend([token] * count)
 
-            model_keys = list(model.keys())
-            first_key = model_keys[0]
-            tentative_n = len(first_key.split()) + 1
+            key_sizes = [
+                len(keyphrase.split())
+                for keyphrase in self.model.keys()
+            ]
+            unique_key_sizes = list(set(key_sizes))
+            if len(unique_key_sizes) != 1:
+                raise ValueError("Broken model file: non-uniform parameter N")
+            self.param_n = unique_key_sizes[0] + 1
 
-            for key in model:
-                if len(key.split()) != tentative_n - 1:
-                    raise ValueError(
-                        "Corrupted Model: Ngram length (n) is inconsistent"
-                    )
+        except KeyError as missing_field:
+            self.param_n, self.vocab, self.model = None, None, None
+            raise KeyError(
+                f"Broken model file: Missing field {missing_field}"
+            ) from missing_field
 
-            if self.param_n is None:
-                self.param_n = tentative_n
-            elif self.param_n != tentative_n:
-                raise ValueError(
-                    "Cannot load model: mismatch in n (Ngram context length)"
-                )
+        except ValueError as broken_model_file_error:
+            self.param_n, self.vocab, self.model = None, None, None
+            raise broken_model_file_error
 
-            for token, count in vocab.items():
-                self.vocab[token] += count
 
-            for key, next_token in model.items():
-                for token, count in next_token.items():
-                    self.model[key][token] += count
+    def predict(self, init_key: str|tuple[str]|list[str]) -> str:
+        """ PREDICT
+        Predicts the next token from a given number of tokens
+        Arguments:
+            - init_keys (str|list[str]|tuple[str]): (N - 1) starting tokens.
+                May be a string of space-separated tokens, or a list or tuple.
+        Returns:
+            - prediction (str): Nth token
+        """
+        if isinstance(init_key, str):
+            init_key = init_key.split()
 
-        except KeyError as broken:
-            raise ValueError(
-                f"Cannot load model: Model JSON doesn't contain field {broken}"
-            ) from broken
+        if len(init_key) != self.param_n - 1:
+            raise ValueError("Initial Phrase must have (N - 1) tokens")
 
-        except IndexError as empty_model:
-            raise ValueError(
-                "Cannot load model: Model appears to be empty"
-            ) from empty_model
+        keyphrase = ' '.join(init_key)
+        if keyphrase in self.model:
+            spreadout = []
+            for token, count in self.model[keyphrase].items():
+                spreadout.extend([token] * count)
+            return random.choice(spreadout)
+
+        return random.choice(self.vocab_spreadout)
 
 
     def __call__(self, init_key: str|tuple[str]|list[str]) -> Self:
@@ -168,30 +181,7 @@ class NGramGenerator:
             raise StopIteration
 
         keyphrase = ' '.join(self.state)
-
-        if keyphrase in self.model:
-            candidates = []
-            for token, count in self.model[keyphrase].items():
-                candidates.extend([token] * count)
-
-            choice = random.choice(candidates)
-            self.state.pop(0)
-            self.state.append(choice)
-
-            return choice
-
-        choice = random.choice(self.vocab_spreadout)
+        next_token = self.predict(keyphrase)
         self.state.pop(0)
-        self.state.append(choice)
-        return choice
-
-
-    @property
-    def data(self) -> dict[str, dict]:
-        """ DATA (Property):
-            A dictionary containing the vocabulary and parameters of the model
-        """
-        return {
-            "vocab": dict(self.vocab),
-            "model": {k: dict(v) for k, v in self.model.items()}
-        }
+        self.state.append(next_token)
+        return next_token
