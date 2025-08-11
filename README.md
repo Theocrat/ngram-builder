@@ -43,14 +43,15 @@ text using an existing model.
 
 #### Listing and Deleting Models
 
-To list existing models, invoke ngram with the `list` argument.
+To list existing models, invoke ngram with the `list` command.
 ```sh
 ngram list
 ```
 
-To delete a model that was trained before, use the `delete` argument.
+To delete a model that was trained before, use the `delete` command with the 
+`--name` argument to specify the model.
 ```sh
-ngram delete model-name
+ngram delete --name model-name
 ```
 
 #### Training a New Model or Tuning an Existing Model
