@@ -45,7 +45,7 @@ class NGramBuilder:
             Arguments:
                 - sourcefile (str | io.TextIOWraper): File for training, which
                     should contain the text for training the file. Either the 
-                    path to the fike should be provided as a string, or the file
+                    path to the file should be provided as a string, or the file
                     object should be provided.
             Returns: None
         """
