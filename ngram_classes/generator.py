@@ -14,10 +14,24 @@ class NGramGenerator:
     Class for running prediction and autoregression tasks
     Usage:
         generator = NGramGenerator()
+
+        # Model loading method 1: from file path
         generator.load_file("path/to/trigram/model.json")
 
-        for token in generator(["token_1", "token_2"]):
+        # Model loading method 2: from file object (Text I/O Wrapper)
+        with open("path/to/trigram/model.json") as modelfile:
+            generator.load_file(modelfile)
+
+        # Text prediction method 1: predict method
+        next_token = generator.predict("token_1 token_2") # Using string
+        next_token = generator.predict(["token_1", "token_2"]) # List
+        next_token = generator.predict(("token_1", "token_2")) # Tuple
+
+        # Text prediction method 2: Autoregression loop
+        for token in generator(["token_1", "token_2"]): # use str, list or tuple
             print(token, end=" ")
+            if terminating_condition():
+                break
         print()
     """
 
@@ -142,27 +156,17 @@ class NGramGenerator:
         """
         if isinstance(init_key, str):
             self.state = init_key.split()
-            if len(self.state) != self.param_n - 1:
-                raise ValueError(
-                    f"Cannot generate with starting phrase {self.state}: "
-                    f"Number of tokens does not match (N - 1) for this model"
-                )
 
         if isinstance(init_key, list):
             self.state = [*init_key]
-            if len(self.state) != self.param_n - 1:
-                raise ValueError(
-                    f"Cannot generate with starting phrase {self.state}: "
-                    f"Number of tokens does not match (N - 1) for this model"
-                )
 
         if isinstance(init_key, tuple):
             self.state = list(init_key)
-            if len(self.state) != self.param_n - 1:
-                raise ValueError(
-                    f"Cannot generate with starting phrase {self.state}: "
-                    f"Number of tokens does not match (N - 1) for this model"
-                )
+
+        if len(self.state) != self.param_n - 1:
+            raise ValueError(
+                f"Starting phrase {self.state} does not have (N -1) tokens"
+            )
 
         return self
 
