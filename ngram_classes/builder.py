@@ -1,3 +1,5 @@
+""" Defines the NGramBuilder class, which trains and saves NGram models """
+
 from __future__ import annotations
 
 import io
@@ -10,15 +12,44 @@ from collections import defaultdict
 from unidecode import unidecode
 
 class NGramBuilder:
-    """ Class for training and tuning Ngram models """
+    """ N-GRAM BUILDER
 
-    def __init__(self, n: int):
+    Class for training and tuning Ngram models. It represents the model during
+    its training and tuning process.
+
+    Usage:
+        builder = NGramBuilder(n=3) # For a trigram example
+
+        # Training / tuning method 1: by file path
+        builder.add_from_file("path/to/text/file.txt")
+
+        # Training / tuning method 2: by file object (Text I/O Wrapper)
+        with open("path/to/another/text/file.txt") as datafile:
+            builder.add_from_file(datafile)
+
+        # Training / tuning method 3: by string containing training document
+        builder.add_source("String document for tuning the model")
+
+        # Getting the model vocabulary and parameters
+        ngram = builder.data
+        vocab = ngram["vocab"]
+        model = ngram["model"]
+
+        # Saving method 1: by file path
+        builder.save("path/to/save/file.json")
+
+        # Saving method 2: by file object in write mode (Text I/O Wrapper)
+        with open("path/to/duplicate/savefile.json", "w") as savefile:
+            builder.save(savefile)
+    """
+
+    def __init__(self, param_n: int):
         """ Initializes an Ngram model using a value of n """
-        self.n = n
+        self.param_n = param_n
         self.vocab = defaultdict(int)
         self.model = defaultdict(lambda: defaultdict(int))
 
-    
+
     def add_source(self, text: str) -> None:
         """ ADD SOURCE: Trains the model on a source text.
             Arguments:
@@ -28,14 +59,14 @@ class NGramBuilder:
         tokens = NGramBuilder.generate_tokens(text)
         offsetted_sequences = [
             tokens[offset:]
-            for offset in range(self.n)
+            for offset in range(self.param_n)
         ]
 
         for token_tuple in zip(*offsetted_sequences):
             *key_tokens, next_token = token_tuple
             key = " ".join(key_tokens)
             self.model[key][next_token] += 1
-        
+
         for token in tokens:
             self.vocab[token] += 1
 
@@ -44,25 +75,27 @@ class NGramBuilder:
         """ ADD FROM FILE: Trains the model on the contents of a source file.
             Arguments:
                 - sourcefile (str | io.TextIOWraper): File for training, which
-                    should contain the text for training the file. Either the 
+                    should contain the text for training the file. Either the
                     path to the file should be provided as a string, or the file
                     object should be provided.
             Returns: None
         """
         if isinstance(sourcefile, str):
-            with open(sourcefile) as wrapper:
+            with open(sourcefile, "r") as wrapper:
                 source = wrapper.read()
-        
+
         elif isinstance(sourcefile, io.TextIOWrapper):
             try:
                 source = sourcefile.read()
 
-            except ValueError as ve:
-                raise ValueError(f"Cannot add source from file: {str(ve)}")
-            
+            except ValueError as file_object_value_error:
+                raise ValueError(
+                    f"Cannot add source from file: {file_object_value_error}"
+                ) from file_object_value_error
+
         self.add_source(source)
 
-    
+
     def save(self, modelfile: str|io.TextIOWrapper) -> None:
         """ SAVE: Saves the model into a JSON file
             Arguments:
@@ -78,12 +111,12 @@ class NGramBuilder:
         elif isinstance(modelfile, io.TextIOWrapper):
             try:
                 json.dump(self.data, modelfile, indent=2)
-            except ValueError:
+            except ValueError as unwritable_file:
                 raise ValueError(
                     f"Cannot save: '{modelfile.name}' is either closed or open"
                     "in the read-only mode."
-                )
-        
+                ) from unwritable_file
+
         else:
             raise ValueError(
                 "Argument to save has to be file object or path to file (str)."
@@ -94,19 +127,19 @@ class NGramBuilder:
         """ COPY: Creates a deep copy of this object.
             Arguments: None
             Returns:
-                - duplicate (NGramBuilder): Another object of this class, with 
+                - duplicate (NGramBuilder): Another object of this class, with
                     the same values of the `n`, `model`, and `vocab` fields.
         """
-        duplicate = NGramBuilder(n=self.n)
+        duplicate = NGramBuilder(param_n=self.param_n)
         duplicate.vocab = deepcopy(self.vocab)
         duplicate.model = deepcopy(self.model)
         return duplicate
-    
-    
+
+
     def __add__(self, other_builder) -> NGramBuilder:
         """ __ADD__ (Operator +)
             Combines two models, generating a new model with the same parameters
-            as would have resulted from training a model on the combined 
+            as would have resulted from training a model on the combined
             training data of both models.
             Usage:
                 result = builder_1 + builder_2
@@ -114,11 +147,11 @@ class NGramBuilder:
                 result (NGramBuilder): A new model which has learned the
                 combined learning data of both the operand models.
         """
-        if self.n != other_builder.n:
+        if self.param_n != other_builder.n:
             raise ValueError("Adding Incompatible Models: N not same.")
-        
+
         duplicate = self.copy()
-        
+
         for token, count in other_builder.vocab.items():
             duplicate.vocab[token] += count
 
@@ -128,7 +161,7 @@ class NGramBuilder:
 
         return duplicate
 
-    
+
     @staticmethod
     def generate_tokens(text) -> list[str]:
         """ GENERATE TOKENS: Static helper method for tokenizing text
@@ -147,7 +180,7 @@ class NGramBuilder:
 
     @property
     def data(self) -> dict[str, dict]:
-        """ DATA (Property): 
+        """ DATA (Property):
             A dictionary containing the vocabulary and parameters of the model
         """
         return {

@@ -4,6 +4,9 @@ models
 # The main file; Used during development
 main.py
 
+# The linter output, used for linting into PEP8 format
+lint.log
+
 # Saved models; Used during development
 /model-saves
 
