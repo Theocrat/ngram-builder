@@ -22,7 +22,7 @@ class NGramGenerator:
         with open("path/to/trigram/model.json") as modelfile:
             generator.load_file(modelfile)
 
-        # Text prediction method 1: predict method
+        # Text prediction method 1: predict method (using one of three methods)
         next_token = generator.predict("token_1 token_2") # Using string
         next_token = generator.predict(["token_1", "token_2"]) # List
         next_token = generator.predict(("token_1", "token_2")) # Tuple
