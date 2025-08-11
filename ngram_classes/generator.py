@@ -7,8 +7,6 @@ import io
 import json
 import random
 
-from collections import defaultdict
-
 class NGramGenerator:
     """ N-GRAM GENERATOR
     Class for running prediction and autoregression tasks
@@ -38,8 +36,8 @@ class NGramGenerator:
     def __init__(self):
         """ Initializes the autoregressor with empty fields """
         self.param_n = None
-        self.vocab = defaultdict(int)
-        self.model = defaultdict(lambda: defaultdict(int))
+        self.vocab = None
+        self.model = None
         self.state = None
         self.vocab_spreadout = None
 
@@ -126,6 +124,12 @@ class NGramGenerator:
         Returns:
             - prediction (str): Nth token
         """
+        if any((
+            self.vocab is None, self.param_n is None,
+            self.model is None, self.vocab_spreadout is None
+        )):
+            raise ValueError("Cannot predict without loading a model!")
+
         if isinstance(init_key, str):
             init_key = init_key.split()
 
@@ -173,9 +177,6 @@ class NGramGenerator:
 
     def __iter__(self) -> Self:
         """ Prepare this object for iteration and return it (by reference) """
-        self.vocab_spreadout = []
-        for token, count in self.vocab.items():
-            self.vocab_spreadout.extend([token] * count)
         return self
 
 
